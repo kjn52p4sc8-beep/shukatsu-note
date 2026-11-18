@@ -1,6 +1,6 @@
 import { MailDialog } from './MailDialog';
 import { finishMailCallback } from '../data/mail';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { characterCount, gmailUrl } from '../core/companies';
 import { deadlineMs, fmtDate, shortLeft, weekRange, DAY } from '../core/dates';
 import { checkProgress, newId, pendingEntries, platformCounts, sampleEntries, sortEntries } from '../core/entries';
@@ -17,6 +17,7 @@ import { CalendarDialog } from './CalendarDialog';
 import { CareerNotebook } from './CareerNotebook';
 import { EntryCard } from './EntryCard';
 import { DeleteEntryDialog } from './DeleteEntryDialog';
+import { DeleteUndoBar, UNDO_MS, type DeletedBatch } from './DeleteUndoBar';
 import { EntryForm } from './EntryForm';
 import { ExportDialog } from './ExportDialog';
 import { NextBoard } from './NextBoard';
@@ -102,21 +103,27 @@ export function BoardScreen({ store, user, recovery }: Props) {
   const find = (id: string | null) => (id ? entries.find((e) => e.id === id) ?? null : null);
   const close = () => setDialog({ type: 'none' });
 
+  // 削除の取り消しは、ほかのお知らせに上書きされないよう専用の枠で持つ
+  const [undoBatches, setUndoBatches] = useState<DeletedBatch[]>([]);
+  const batchSeq = useRef(0);
   const deleteEntries = (ids: string[]) => {
     const deleted = store.getSnapshot().entries.filter(e => ids.includes(e.id));
     if (!deleted.length) { setDeleteId(null); return; }
     store.deleteEntries(deleted.map(e => e.id));
     setDeleteId(null);
     close();
-    toast(`${deleted.length}件の登録を削除しました`, {
-      label: '元に戻す',
-      run: () => {
-        // Do not overwrite an entry that has already been restored/edited elsewhere.
-        const active = new Set(store.getSnapshot().entries.map(e => e.id));
-        store.saveEntries(deleted.filter(e => !active.has(e.id)));
-      },
-    });
+    const batch = { id: ++batchSeq.current, entries: deleted, expiresAt: Date.now() + UNDO_MS };
+    setUndoBatches((list) => [...list, batch]);
   };
+  const undoDelete = (batch: DeletedBatch) => {
+    // すでに別の端末や操作で戻っている登録は上書きしない
+    const active = new Set(store.getSnapshot().entries.map(e => e.id));
+    const restore = batch.entries.filter(e => !active.has(e.id));
+    if (restore.length) store.saveEntries(restore);
+    setUndoBatches((list) => list.filter((b) => b.id !== batch.id));
+    toast(restore.length ? '元に戻しました' : 'すでに元に戻っています');
+  };
+  const expireUndo = useCallback((ids: number[]) => setUndoBatches((list) => list.filter((b) => !ids.includes(b.id))), []);
 
   const onSaveFile = async (name: string, text: string, mime: string) => {
     if (!(await saveFile(name, text, mime))) setTextFile({ name, text });
@@ -551,6 +558,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
           </div>
         </Modal>
       )}
+      <DeleteUndoBar batches={undoBatches} onUndo={undoDelete} onExpire={expireUndo} />
     </>
   );
 }

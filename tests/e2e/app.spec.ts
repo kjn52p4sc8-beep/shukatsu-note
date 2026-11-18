@@ -66,7 +66,8 @@ test('登録して追加したエントリーが、別の端末にも同期さ�
 
   // 削除も伝わる
   await page.locator('.card', { hasText: 'E2E商事' }).getByRole('button', { name: '編集' }).click();
-  await page.getByRole('button', { name: '削除', exact: true }).click();
+  // 企業の行にも「削除」があるので、編集画面の中のボタンを押す
+  await page.getByRole('dialog').getByRole('button', { name: '削除', exact: true }).click();
   await page.getByRole('button', { name: '削除する' }).click();
   await synced(page);
   await pc.page.locator('.sync').click();

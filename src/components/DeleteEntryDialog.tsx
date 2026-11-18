@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fmtDate } from '../core/dates';
 import type { Entry } from '../core/types';
 import { Modal } from '../ui/Modal';
 
@@ -16,8 +17,18 @@ export function DeleteEntryDialog({ entry, entries, onDelete, onClose }: {
       <input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} />
       同じ企業の登録をすべて削除する（{related.length}件）
     </label>}
-    <ul className="rows">{targets.map(e => <li key={e.id}>{e.kind || '種類未設定'}・{e.dDate || '締切未登録'} {e.dTime}</li>)}</ul>
+    <ul className="rows">{targets.map(e => <li key={e.id}>{e.kind || '種類未設定'}・{e.dDate ? `締切 ${fmtDate(e.dDate, Date.now())}${e.dTime ? ' ' + e.dTime : ''}` : '締切未登録'}</li>)}</ul>
     <p className="warn">この登録に保存したES {drafts}件・面接ノート {interviews}件・メモも一緒に削除されます。</p>
+    {(drafts > 0 || interviews > 0) && <div className="delete-detail" aria-label="一緒に削除される記録">
+      {drafts > 0 && <>
+        <h3>ES</h3>
+        <ul>{targets.flatMap(e => e.esDrafts.map(d => <li key={d.id}>{d.title || '無題'}（{d.limit}字）</li>))}</ul>
+      </>}
+      {interviews > 0 && <>
+        <h3>面接ノート</h3>
+        <ul>{targets.flatMap(e => e.interviews.map(n => <li key={n.id}>{n.round || '面接'}{n.date ? `（${fmtDate(n.date, Date.now())}）` : ''}</li>))}</ul>
+      </>}
+    </div>}
     <p className="hint">削除直後のお知らせから8秒間、元に戻せます。必要な記録は先にExcel・Wordやバックアップに保存してください。</p>
     <p className="hint">アプリの一覧と、同期後の通知対象から外れます。外部の応募・Gmailのメール・Googleカレンダーの予定は取り消しません。</p>
     <div className="row">

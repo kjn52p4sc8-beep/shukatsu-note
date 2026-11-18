@@ -166,6 +166,49 @@ describe('2台の端末での同期（本物のサーバー）', () => {
   });
 });
 
+describe('企業の登録の削除と取り消し（本物のサーバー）', () => {
+  it('削除は別の端末にも伝わり、元に戻すとES・面接ノートごと別の端末にも戻る。通知の対象からも外れる', async () => {
+    const u = await newUser();
+    const phone = new Store(new MemoryKV(), 'phone', supabaseRemote(u.client));
+    const pc = new Store(new MemoryKV(), 'pc', supabaseRemote(await login(u.email, u.password)));
+    const names = (s: Store) => s.getSnapshot().entries.map((x) => x.company).sort();
+
+    const target = make('みらい商事', {
+      dDate: '2031-03-10', dTime: '12:00', memo: '残したいメモ',
+      esDrafts: [{ id: newId(), title: '志望動機', limit: 400, text: '御社を志望する理由は…' }],
+      interviews: [{ id: newId(), date: '2031-03-01', round: '一次面接', question: '強みは？', answer: '粘り強さ', reflection: '具体例を' }],
+    });
+    const other = make('あおぞら銀行', { dDate: '2031-03-10', dTime: '12:00' });
+    phone.saveEntries([target, other]);
+    await phone.sync();
+    await pc.sync();
+    expect(names(pc)).toEqual(['あおぞら銀行', 'みらい商事']);
+    const saved = structuredClone(phone.getSnapshot().entries.find((e) => e.id === target.id)!);
+
+    // 削除 → PC からも消え、サーバーでは削除済みの印が付く（通知の対象外）
+    phone.deleteEntries([target.id]);
+    await phone.sync();
+    await pc.sync();
+    expect(names(pc)).toEqual(['あおぞら銀行']);
+    const { data: row } = await admin().from('entries').select('deleted_at').eq('id', target.id).single();
+    expect(row!.deleted_at).not.toBeNull();
+    const { data: due } = await admin().rpc('claim_due_reminders', { p_now: new Date(Date.parse('2031-03-10T10:00:00+09:00')).toISOString() });
+    expect((due as { entry_id: string }[]).map((r) => r.entry_id)).not.toContain(target.id);
+
+    // 元に戻す（アプリの「元に戻す」と同じく、削除前の内容を保存し直す）→ PC にも ES・面接ノートごと戻る
+    phone.saveEntries([saved]);
+    await phone.sync();
+    await pc.sync();
+    expect(names(pc)).toEqual(['あおぞら銀行', 'みらい商事']);
+    const back = pc.getSnapshot().entries.find((e) => e.id === target.id)!;
+    expect(back.memo).toBe('残したいメモ');
+    expect(back.esDrafts.map((d) => d.title)).toEqual(['志望動機']);
+    expect(back.interviews.map((d) => d.round)).toEqual(['一次面接']);
+    phone.dispose();
+    pc.dispose();
+  });
+});
+
 describe('アカウントの削除', () => {
   it('本人の操作で、アカウントとデータがすべて消える', async () => {
     const u = await newUser();

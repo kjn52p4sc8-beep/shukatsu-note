@@ -465,3 +465,10 @@ details.checks summary{min-height:44px;align-content:center}
 .mail-demo{padding:12px;border-bottom:1px solid var(--line)}
 .check-row{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
 .check-row input{flex:none}
+
+/* 削除の取り消し（ほかのお知らせより一段上に出す） */
+.toast.undo-bar{bottom:calc(140px + env(safe-area-inset-bottom));pointer-events:auto;text-align:left}
+.toast.undo-bar small{display:block;font-size:11.5px;font-weight:500;opacity:.85}
+.delete-detail{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);font-size:13.5px}
+.delete-detail h3{font-size:13px;margin:0}
+.delete-detail ul{display:flex;flex-direction:column;gap:2px;padding-left:1.2em;list-style:disc}
