@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'badge-96.png'],
       manifest: {
         name: '就活しめきりボード',
-        short_name: '就活ノート',
+        short_name: '就活しめきり',
         description: '複数の就活サイトのエントリーと締切を1画面で管理',
         lang: 'ja',
         start_url: './',

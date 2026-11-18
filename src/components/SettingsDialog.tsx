@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { legacyIdToUuid, parseBackup, toBackupJSON, toCSV, type Imported } from '../core/backup';
+import { legacyIdToUuid, parseBackup, toBackupJSON, toCSV } from '../core/backup';
 import { allEvents, buildICS } from '../core/calendar';
 import { fmtDate, jstDateStr, jstTimeStr } from '../core/dates';
+import { sampleEntries } from '../core/entries';
 import type { Entry } from '../core/types';
 import { deleteAccount, signOut, type AuthUser } from '../data/auth';
 import { EMBEDDED } from '../data/config';
@@ -37,7 +38,7 @@ function syncText(snap: Snapshot): string {
 export function SettingsDialog({ store, snap, user, onSaveFile, onChangePassword, onClose }: Props) {
   const install = useInstallPrompt();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [pendingImport, setPendingImport] = useState<{ name: string; items: Imported[] } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ name: string; entries: Entry[]; overlap: number } | null>(null);
   const [confirm, setConfirm] = useState<'' | 'signout' | 'delete'>('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -67,7 +68,14 @@ export function SettingsDialog({ store, snap, user, onSaveFile, onChangePassword
     try {
       const items = parseBackup(file.name, await file.text());
       if (!items.length) throw new Error('読み込める項目がありませんでした');
-      setPendingImport({ name: file.name, items });
+      // 以前のブラウザ保存版のIDは、利用者ごとに決まったIDに直す（同じファイルを2回読んでも二重にならない）
+      const scope = user?.id ?? 'local';
+      const entries: Entry[] = [];
+      for (const { entry, legacyId } of items) {
+        entries.push(legacyId ? { ...entry, id: await legacyIdToUuid(scope, legacyId) } : entry);
+      }
+      const current = new Set(snap.entries.map((e) => e.id));
+      setPendingImport({ name: file.name, entries, overlap: entries.filter((e) => current.has(e.id)).length });
     } catch (e) {
       setPendingImport(null);
       toast('読み込めませんでした：' + (e instanceof Error && e.message ? e.message : 'ファイルの形式を確認してください'));
@@ -75,11 +83,7 @@ export function SettingsDialog({ store, snap, user, onSaveFile, onChangePassword
   };
   const applyImport = async (replace: boolean) => {
     if (!pendingImport) return;
-    const scope = user?.id ?? 'local';
-    const entries: Entry[] = [];
-    for (const { entry, legacyId } of pendingImport.items) {
-      entries.push(legacyId ? { ...entry, id: await legacyIdToUuid(scope, legacyId) } : entry);
-    }
+    const { entries } = pendingImport;
     store.importEntries(entries, replace);
     setPendingImport(null);
     toast(entries.length + ' 件を読み込みました');
@@ -166,10 +170,27 @@ export function SettingsDialog({ store, snap, user, onSaveFile, onChangePassword
             onClick={() => {
               const evs = allEvents(snap.entries);
               if (!evs.length) return toast('書き出せる締切がありません');
-              onSaveFile('就活しめきり_' + todayTag() + '.ics', buildICS(evs, snap.settings.icsReminders, Date.now()), 'text/calendar');
+              onSaveFile('就活しめきりボード_' + todayTag() + '.ics', buildICS(evs, snap.settings.icsReminders, Date.now()), 'text/calendar');
             }}
           >
             全締切をまとめて .ics で書き出す
+          </button>
+        </div>
+      </section>
+
+      <section>
+        <h3>サンプルで試す</h3>
+        <p className="muted">架空の企業5件（締切・提出物つき）を追加します。使い方が分かったら、ホームの「サンプルを全部消す」で消せます。</p>
+        <div className="row">
+          <button
+            className="btn small" type="button"
+            onClick={() => {
+              store.saveEntries(sampleEntries(Date.now()));
+              toast('サンプルを5件入れました');
+              onClose();
+            }}
+          >
+            サンプルデータを入れる
           </button>
         </div>
       </section>
@@ -182,11 +203,11 @@ export function SettingsDialog({ store, snap, user, onSaveFile, onChangePassword
         <div className="row">
           <button
             className="btn small" type="button"
-            onClick={() => onSaveFile('shukatsu-backup-' + todayTag() + '.json', toBackupJSON(snap.entries, Date.now()), 'application/json')}
+            onClick={() => onSaveFile('就活しめきりボード_バックアップ_' + todayTag() + '.json', toBackupJSON(snap.entries, Date.now()), 'application/json')}
           >
             JSONで書き出す
           </button>
-          <button className="btn small" type="button" onClick={() => onSaveFile('shukatsu-backup-' + todayTag() + '.csv', toCSV(snap.entries), 'text/csv')}>
+          <button className="btn small" type="button" onClick={() => onSaveFile('就活しめきりボード_バックアップ_' + todayTag() + '.csv', toCSV(snap.entries), 'text/csv')}>
             CSVで書き出す
           </button>
           <button className="btn small" type="button" onClick={() => fileRef.current?.click()}>
@@ -204,7 +225,13 @@ export function SettingsDialog({ store, snap, user, onSaveFile, onChangePassword
         {pendingImport && (
           <div className="stack">
             <p className="strong">
-              「{pendingImport.name}」から {pendingImport.items.length} 件を読み込みます。
+              「{pendingImport.name}」から {pendingImport.entries.length} 件を読み込みます。
+            </p>
+            <p className="muted">
+              {pendingImport.overlap > 0
+                ? `うち ${pendingImport.overlap} 件はすでに登録されている企業です。「追加する」を選ぶと、その ${pendingImport.overlap} 件は読み込んだ内容で上書きされ、二重にはなりません。`
+                : '今の登録と重なるものはありません。「追加する」を選ぶと、今の登録はそのまま残ります。'}
+              「置き換える」を選ぶと、今の登録はすべて消えて、ファイルの内容だけになります。
             </p>
             <div className="row">
               <button className="btn small primary" type="button" onClick={() => void applyImport(false)}>

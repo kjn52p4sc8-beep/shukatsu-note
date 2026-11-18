@@ -89,26 +89,51 @@ describe('カレンダー書き出し', () => {
   const timed = entry({ company: 'A社', kind: '本選考', dDate: '2026-11-20', dTime: '12:00', eDate: '2026-11-25', eTime: '13:00' });
   const allDay = entry({ company: 'B社', dDate: '2026-11-20' });
 
-  it('時刻ありの締切は 30分前〜締切 の予定になる', () => {
+  it('時刻ありの締切は、締切の時刻に始まる予定になる', () => {
     const ev = calEvent(timed, 'deadline')!;
-    expect(ev.end).toBe(deadlineMs(timed));
+    expect(ev.start).toBe(deadlineMs(timed));
     expect(ev.end! - ev.start!).toBe(30 * 60000);
     expect(ev.title).toBe('【締切 12:00】A社 本選考');
-    // リマインダーは実際の締切から数える
-    expect(alarmTriggers(ev, [1440, 60])).toEqual(['-PT1470M', '-PT90M']);
   });
 
-  it('終日の締切: 前日は前日9時、3時間前は当日21時', () => {
+  it('リマインダーは、表示どおり締切のちょうど○分前に鳴る（実機評価の不具合）', () => {
+    // TRIGGER（-PT…M / -PT…H / PT…M）を、鳴る時刻（UTCミリ秒）に直す
+    const fireAt = (startMs: number, trigger: string) => {
+      const m = trigger.match(/^(-?)PT(\d+)([MH])$/)!;
+      const ms = Number(m[2]) * (m[3] === 'H' ? 3600e3 : 60e3);
+      return startMs + (m[1] ? -ms : ms);
+    };
+    const D = deadlineMs(timed)!;
+    const ev = calEvent(timed, 'deadline')!;
+    for (const [r, label] of [[10080, '7日前'], [4320, '3日前'], [1440, '前日'], [180, '3時間前'], [60, '1時間前']] as const) {
+      const [t] = alarmTriggers(ev, [r]);
+      expect(fireAt(ev.start!, t), label).toBe(D - r * 60000);
+    }
+    // 開催（時刻あり）も、開催の時刻から数える
+    const event = calEvent(timed, 'event')!;
+    expect(fireAt(event.start!, alarmTriggers(event, [60])[0])).toBe(Date.parse('2026-11-25T12:00:00+09:00'));
+  });
+
+  it('23:59締切の予定は、日付をまたがない', () => {
+    const late = entry({ dDate: '2026-11-20', dTime: '23:59' });
+    const ev = calEvent(late, 'deadline')!;
+    expect(ev.start).toBe(Date.parse('2026-11-20T23:59:00+09:00'));
+    expect(ev.end).toBe(Date.parse('2026-11-20T23:59:59+09:00'));
+  });
+
+  it('終日の締切: 日単位はその日の朝9時、3時間前は当日21時', () => {
     const ev = calEvent(allDay, 'deadline')!;
     expect(ev.allDay).toBe(true);
+    // 予定の開始（その日の0:00）から数える：前日9時＝-15時間、3日前9時＝-63時間、7日前9時＝-159時間
     expect(alarmTriggers(ev, [1440, 180])).toEqual(['-PT15H', 'PT1260M']);
+    expect(alarmTriggers(ev, [4320, 10080])).toEqual(['-PT63H', '-PT159H']);
   });
 
   it('.ics は CRLF で、長い行は75バイトで折り返す', () => {
     const ics = buildICS(allEvents([timed, allDay]), [1440], NOW);
     expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(3);
-    expect(ics).toContain('DTSTART:20261120T023000Z');
+    expect(ics).toContain('DTSTART:20261120T030000Z');
     expect(ics).toContain('DTSTART;VALUE=DATE:20261120');
     for (const line of ics.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);
     expect(foldLine('あ'.repeat(30))).toContain('\r\n ');

@@ -68,6 +68,8 @@ export const STATUS_LABEL: Record<Status, string> = {
 };
 /** [分, 表示名] */
 export const REMINDERS: [number, string][] = [
+  [10080, '7日前'],
+  [4320, '3日前'],
   [1440, '前日'],
   [180, '3時間前'],
   [60, '1時間前'],

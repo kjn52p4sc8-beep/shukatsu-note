@@ -12,14 +12,14 @@ test('1文字候補から登録し、ES3種類と面接記録を保存、編集�
   await page.getByRole('button', { name: '明日', exact: true }).click();
   await page.getByRole('button', { name: '保存する', exact: true }).click();
   await page.locator('.card').getByRole('button', { name: /ESストック/ }).click();
-  for (const limit of [300, 400, 600]) {
+  for (const limit of [400, 800, 1200]) {
     await page.getByRole('button', { name: `＋ ${limit}文字`, exact: true }).click();
     await page.getByLabel('設問・タイトル').fill(`自己PR${limit}`);
     await page.getByLabel('ES本文').fill(`私の強み${limit}`);
   }
-  await page.getByLabel('ES本文').fill('あ'.repeat(601));
-  await expect(page.getByText('601 / 600文字', { exact: false })).toContainText('1文字オーバー');
-  await page.getByLabel('ES本文').fill('私の強み600');
+  await page.getByLabel('ES本文').fill('あ'.repeat(1201));
+  await expect(page.getByText('1201 / 1200文字', { exact: false })).toContainText('1文字オーバー');
+  await page.getByLabel('ES本文').fill('私の強み1200');
   await page.getByRole('tab', { name: '面接ノート', exact: true }).click();
   await page.getByRole('button', { name: '＋ 面接を記録' }).click();
   await page.getByLabel('聞かれた質問').fill('入社後に何をしたいですか？');
@@ -34,7 +34,7 @@ test('1文字候補から登録し、ES3種類と面接記録を保存、編集�
   await page.reload();
   await page.locator('.card').getByRole('button', { name: /ESストック/ }).click();
   await expect(page.getByLabel('保存した原稿').locator('option')).toHaveCount(4);
-  await expect(page.getByLabel('ES本文')).toHaveValue('私の強み300');
+  await expect(page.getByLabel('ES本文')).toHaveValue('私の強み400');
   await page.screenshot({ path: 'test-results/es-mobile.png' });
   await page.getByRole('tab', { name: '面接ノート', exact: true }).click();
   await expect(page.getByLabel('聞かれた質問')).toHaveValue('入社後に何をしたいですか？');
@@ -50,7 +50,7 @@ test('1文字候補から登録し、ES3種類と面接記録を保存、編集�
   await page.getByRole('button', { name: 'Word（.docx）を保存' }).click();
   const word = await wordDownload;
   const zip = await JSZip.loadAsync(await readFile((await word.path())!));
-  expect(await zip.file('word/document.xml')!.async('string')).toContain('私の強み600');
+  expect(await zip.file('word/document.xml')!.async('string')).toContain('私の強み1200');
 });
 
 test('GmailとGoogleカレンダーのリンク・通知設定が使える', async ({ page }) => {

@@ -29,7 +29,7 @@ export async function excelBlob(entries: Entry[]): Promise<Blob> {
 export async function wordBlob(entries: Entry[]): Promise<Blob> {
   const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
   const lines = (text: string) => text.split(/\r?\n/).map(line => new Paragraph({ children: [new TextRun(line)], spacing: { after: 100 } }));
-  const children = [new Paragraph({ text: '就活ノート', heading: HeadingLevel.TITLE })];
+  const children = [new Paragraph({ text: '就活しめきりボード', heading: HeadingLevel.TITLE })];
   for (const e of entries) {
     children.push(new Paragraph({ text: `${e.company}｜${e.kind}`, heading: HeadingLevel.HEADING_1 }));
     children.push(...lines(`状態：${STATUS_LABEL[e.status]}\n締切：${e.dDate || '未登録'} ${e.dTime}\n開催：${e.eDate || '未登録'} ${e.eTime}\n応募先：${e.platform}\n選考ステップ：${e.step}\nURL：${e.url}\n提出物：${e.checklist.map(c => `${c.done ? '✓' : '□'} ${c.text}`).join('、')}\nメモ：${e.memo}`));

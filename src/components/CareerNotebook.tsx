@@ -40,7 +40,7 @@ export function CareerNotebook({ entry, tab: initialTab, focusId, onPatch, onClo
     </div>
     {tab === 'es' ? <div className="stack" role="tabpanel" aria-label="ESストック">
       <p className="muted">設問や文字数に合わせて原稿を残せます。コピーして応募フォームへ。</p>
-      <div className="quick">{[300, 400, 600].map(limit => <button key={limit} type="button" disabled={entry.esDrafts.length >= 50} onClick={() => addES(limit)}>＋ {limit}文字</button>)}</div>
+      <div className="quick">{[400, 800, 1200].map(limit => <button key={limit} type="button" disabled={entry.esDrafts.length >= 50} onClick={() => addES(limit)}>＋ {limit}文字</button>)}</div>
       {!!entry.esDrafts.length && <label className="fg">保存した原稿
         <select className="field" value={selectedES} onChange={e => { setSelectedES(e.target.value); setDeleting(''); }}>
           <option value="">原稿を選ぶ</option>{entry.esDrafts.map(d => <option key={d.id} value={d.id}>{d.title || '無題'}・{d.limit}文字</option>)}

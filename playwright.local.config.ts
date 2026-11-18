@@ -9,7 +9,11 @@ export default defineConfig({
     locale: 'ja-JP',
     timezoneId: 'Asia/Tokyo',
     viewport: { width: 390, height: 844 },
-    launchOptions: process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+    // 実際の端末と同じく、日本語のファイル名を扱える文字設定（UTF-8）でブラウザを起動する
+    launchOptions: {
+      ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+      env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' },
+    },
   },
   webServer: {
     command: 'npm run dev -- --port 4175 --strictPort',

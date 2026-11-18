@@ -66,7 +66,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
   const [q, setQ] = useState('');
   const [platform, setPlatform] = useState('');
   const [status, setStatus] = useState<'' | Status>('');
-  const [view, setView] = useState<'all' | 'pending' | 'week' | 'overdue' | 'submitted'>('all');
+  const [view, setView] = useState<'all' | 'pending' | 'week' | 'overdue' | 'submitted' | 'skipped'>('all');
 
   const entries = snap.entries;
   const pending = useMemo(() => pendingEntries(entries, now), [entries, now]);
@@ -78,6 +78,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
   const unresolved = entries.filter((it) => it.status === 'undecided').length;
   const overdue = entries.filter((it) => it.status === 'undecided' && deadlineMs(it) !== null && deadlineMs(it)! < now).length;
   const submitted = entries.filter((it) => it.status === 'submitted').length;
+  const skipped = entries.filter((it) => it.status === 'skipped').length;
   const resetFilters = () => { setQ(''); setPlatform(''); setStatus(''); setView('all'); };
   const changeView = (v: typeof view) => { setView(v); setStatus(''); };
   const markSubmitted = (id: string) => { store.patchEntry(id, { status: 'submitted' }); toast('提出済みにしました', { label: '元に戻す', run: () => store.patchEntry(id, { status: 'undecided' }) }); };
@@ -93,6 +94,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
       if (status && it.status !== status) return false;
       const ms = deadlineMs(it);
       if (view === 'submitted' && it.status !== 'submitted') return false;
+      if (view === 'skipped' && it.status !== 'skipped') return false;
       if (['pending', 'week', 'overdue'].includes(view) && it.status !== 'undecided') return false;
       if (view === 'week' && (ms === null || ms < now || ms >= wk.end)) return false;
       if (view === 'overdue' && (ms === null || ms >= now)) return false;
@@ -179,7 +181,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
             <MenuIcon />
           </button>
           <div className="hero-title">
-            <h1>就活ノート</h1>
+            <h1>就活しめきりボード</h1>
             <p>今日の一歩を、未来につなげよう。</p>
           </div>
           <button className="icon-btn" type="button" aria-label="通知設定" title="通知設定" onClick={() => setDialog({ type: 'notifications' })}>
@@ -244,6 +246,8 @@ export function BoardScreen({ store, user, recovery }: Props) {
             entry={pending[0]} now={now} unresolved={unresolved} onSubmit={markSubmitted}
             onEdit={(id) => setDialog({ type: 'form', id })}
             onCalendar={(id) => setDialog({ type: 'calendar', id })}
+            onSample={entries.length === 0 && snap.ready ? () => store.saveEntries(sampleEntries(Date.now())) : undefined}
+            onAdd={() => setDialog({ type: 'form', id: null })}
           />
         </section>
 
@@ -258,7 +262,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
         <section className="sec" aria-labelledby="sec-list">
         <h2 id="sec-list">企業一覧</h2>
         <nav className="quick-filters" aria-label="締切の表示切り替え">
-          {([['all', 'すべて', entries.length], ['pending', '未提出', unresolved], ['week', '今週', weekCount], ['overdue', '期限切れ', overdue], ['submitted', '提出済み', submitted]] as const).map(([v, label, count]) => (
+          {([['all', 'すべて', entries.length], ['pending', '未提出', unresolved], ['week', '今週', weekCount], ['overdue', '期限切れ', overdue], ['submitted', '提出済み', submitted], ['skipped', '見送り', skipped]] as const).map(([v, label, count]) => (
             <button key={v} type="button" aria-pressed={view === v} onClick={() => changeView(v)}>{label}<b>{count}</b></button>
           ))}
         </nav>
@@ -317,12 +321,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
               <li className="empty">条件に合う項目がありません。絞り込みを変えてみてください。</li>
             ) : (
               <li className="empty">
-                <p>まだ何も登録されていません。右下の「＋ 追加」から始めましょう。</p>
-                <p>
-                  <button className="btn small" type="button" onClick={() => store.saveEntries(sampleEntries(Date.now()))}>
-                    サンプルを入れて試してみる
-                  </button>
-                </p>
+                <p>まだ何も登録されていません。右下の「＋ 追加」から始めるか、上の「サンプルを入れて試してみる」で使い方を試せます。</p>
               </li>
             ))}
         </ul>

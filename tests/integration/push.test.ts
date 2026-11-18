@@ -168,6 +168,23 @@ describe('いつ通知するかの判定', () => {
   });
 });
 
+describe('7日前・3日前の通知', () => {
+  it('時刻ありの締切は締切の7日前・3日前に、時刻未定の締切はその日の朝9時に届く', async () => {
+    const u = await newUser();
+    await subscribe(u, 'days');
+    const remote = supabaseRemote(u.client);
+    await remote.pushSettings({ icsReminders: [], pushOffsets: [10080, 4320], editedAt: Date.now() });
+    await remote.pushEntries([make('週前商事', { dDate: '2031-03-10', dTime: '12:00' }), make('日付だけ銀行', { dDate: '2031-03-20' })]);
+    const D = jst('2031-03-10T12:00:00');
+    expect(await claim(u, D - 7 * 864e5 - 60000)).toEqual([]);
+    expect(await claim(u, D - 7 * 864e5)).toEqual(['週前商事:10080']);
+    expect(await claim(u, D - 3 * 864e5)).toEqual(['週前商事:4320']);
+    expect(await claim(u, jst('2031-03-13T08:59:00'))).toEqual([]);
+    expect(await claim(u, jst('2031-03-13T09:00:00'))).toEqual(['日付だけ銀行:10080']);
+    expect(await claim(u, jst('2031-03-17T09:00:00'))).toEqual(['日付だけ銀行:4320']);
+  });
+});
+
 describe('push 関数', () => {
   const fn = () => `${stack().API_URL}/functions/v1/push`;
 

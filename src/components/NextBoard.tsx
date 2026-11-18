@@ -9,10 +9,13 @@ interface Props {
   onSubmit: (id: string) => void;
   onEdit: (id: string) => void;
   onCalendar: (id: string) => void;
+  /** まだ1件も登録がないときだけ渡す。サンプルを入れて試せるようにする */
+  onSample?: () => void;
+  onAdd?: () => void;
 }
 
 /** いちばん近い締切。企業名と「あと◯日」をひと目で読めるカードにする */
-export function NextBoard({ entry: it, now, unresolved, onSubmit, onEdit, onCalendar }: Props) {
+export function NextBoard({ entry: it, now, unresolved, onSubmit, onEdit, onCalendar, onSample, onAdd }: Props) {
   if (!it) {
     return (
       <section className="board empty" aria-live="polite">
@@ -23,10 +26,24 @@ export function NextBoard({ entry: it, now, unresolved, onSubmit, onEdit, onCale
             <p className="meta">
               {unresolved
                 ? `期限切れ・締切未登録の未提出が ${unresolved} 件あります。一覧で確認してください。`
-                : '右下の「＋ 追加」からエントリーを登録できます。'}
+                : onSample
+                  ? 'まず企業を追加しましょう。サンプルで使い方を試すこともできます。'
+                  : '右下の「＋ 追加」からエントリーを登録できます。'}
             </p>
           </div>
         </div>
+        {onSample && (
+          <div className="row">
+            {onAdd && (
+              <button className="btn small primary" type="button" onClick={onAdd}>
+                ＋ 企業を追加する
+              </button>
+            )}
+            <button className="btn small" type="button" onClick={onSample}>
+              サンプルを入れて試してみる
+            </button>
+          </div>
+        )}
       </section>
     );
   }

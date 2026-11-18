@@ -1,3 +1,4 @@
+import { jstDateStr } from '../core/dates';
 import { useState } from 'react';
 import type { Entry } from '../core/types';
 import { Modal } from '../ui/Modal';
@@ -14,7 +15,7 @@ export function ExportDialog({ entries, onClose }: { entries: Entry[]; onClose: 
     setBusy(true); setMessage('');
     try {
       const blob = await (type === 'xlsx' ? excelBlob(entries) : wordBlob(entries));
-      await saveBinary(`就活ノート.${type}`, blob);
+      await saveBinary(`就活しめきりボード_${jstDateStr(Date.now()).replace(/-/g, '')}.${type}`, blob);
       setMessage('ファイルを作成しました。ダウンロード先、または共有先で確認してください。');
     } catch (e) { setMessage(e instanceof Error ? e.message : '書き出せませんでした。もう一度お試しください。'); }
     finally { setBusy(false); }

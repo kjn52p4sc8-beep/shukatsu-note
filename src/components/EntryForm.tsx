@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { DAY, isDate, isTime, jstDateStr } from '../core/dates';
 import { newId, safeUrl } from '../core/entries';
 import { KINDS, PLATFORMS, QUICK_CHECKS, STEPS, type CheckItem, type Entry, type Status } from '../core/types';
 import { CompanyInput } from './CompanyInput';
+import { DateTimeField } from './DateTimeField';
 import { Modal } from '../ui/Modal';
 
 interface Props {
@@ -37,6 +38,8 @@ export function EntryForm({ entry, companies, onSave, onDelete, onClose }: Props
   const [url, setUrl] = useState(entry?.url ?? '');
   const [memo, setMemo] = useState(entry?.memo ?? '');
   const [error, setError] = useState('');
+  // 足りなかった欄を直したら、エラーは消す
+  useEffect(() => setError(''), [company, dDate, dTime, eDate, eTime, url]);
 
   const addCheck = (text: string) => {
     const t = text.trim().slice(0, 60);
@@ -47,7 +50,15 @@ export function EntryForm({ entry, companies, onSave, onDelete, onClose }: Props
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const name = company.trim();
-    if (!name) return setError('企業名を入力してください。');
+    if (!name) {
+      // 何が足りないかを、保存ボタンのすぐ上に出し、企業名の欄に移動する
+      document.getElementById('f-company')?.focus();
+      return setError(
+        dDate
+          ? '企業名を入力してください。'
+          : '企業名と締切日を入力してください。締切日が未定なら、企業名だけでも保存できます。',
+      );
+    }
     if ((dDate && !isDate(dDate)) || (eDate && !isDate(eDate))) return setError('実在する日付を入力してください。');
     if ((dTime && !isTime(dTime)) || (eTime && !isTime(eTime))) return setError('時刻は00:00〜23:59で入力してください。');
     if (dTime && !dDate) return setError('締切の時刻を入れるときは、日付も入れてください。');
@@ -128,23 +139,25 @@ export function EntryForm({ entry, companies, onSave, onDelete, onClose }: Props
         <div className="fg">
           <span className="lbl">申込締切（日本時間）</span>
           <div className="two">
-            <input className="field" id="f-ddate" type="date" aria-label="申込締切の日付" value={dDate} onChange={(e) => setDDate(e.target.value)} />
-            <input className="field" id="f-dtime" type="time" aria-label="申込締切の時刻" value={dTime} onChange={(e) => setDTime(e.target.value)} />
+            <DateTimeField kind="date" id="f-ddate" label="申込締切の日付" value={dDate} onChange={setDDate} />
+            <DateTimeField kind="time" id="f-dtime" label="申込締切の時刻" value={dTime} onChange={setDTime} />
           </div>
           <div className="quick date-shortcuts" aria-label="締切の日付を簡単入力">
             {([[0, '今日'], [1, '明日'], [7, '1週間後']] as const).map(([days, label]) => (
               <button key={days} type="button" onClick={() => setDDate(jstDateStr(Date.now() + days * DAY))}>{label}</button>
             ))}
-            <button type="button" onClick={() => setDTime('23:59')}>23:59</button>
+            {['12:00', '18:00', '23:59'].map((t) => (
+              <button key={t} type="button" onClick={() => setDTime(t)}>{t}</button>
+            ))}
           </div>
-          <span className="hint">時刻が分からなければ日付だけでOK（その日の終わりを締切として扱います）</span>
+          <span className="hint">「2026/11/20」「1120」「18:00」のように直接打つか、貼り付けできます。時刻が分からなければ日付だけでOK（その日の終わりを締切として扱います）</span>
         </div>
 
         <div className="fg">
           <span className="lbl">開催日時（説明会・面接など。任意）</span>
           <div className="two">
-            <input className="field" id="f-edate" type="date" aria-label="開催日" value={eDate} onChange={(e) => setEDate(e.target.value)} />
-            <input className="field" id="f-etime" type="time" aria-label="開催時刻" value={eTime} onChange={(e) => setETime(e.target.value)} />
+            <DateTimeField kind="date" id="f-edate" label="開催日" value={eDate} onChange={setEDate} />
+            <DateTimeField kind="time" id="f-etime" label="開催時刻" value={eTime} onChange={setETime} />
           </div>
         </div>
 
@@ -229,13 +242,13 @@ export function EntryForm({ entry, companies, onSave, onDelete, onClose }: Props
           <textarea className="field" id="f-memo" maxLength={2000} value={memo} onChange={(e) => setMemo(e.target.value)} />
         </div>
 
-        {error && (
-          <p className="err" role="alert">
-            {error}
-          </p>
-        )}
-
         <div className="form-footer">
+          {/* 入力欄が長くても見えるよう、エラーは常に見えている保存ボタンのすぐ上に出す */}
+          {error && (
+            <p className="err" role="alert">
+              {error}
+            </p>
+          )}
           <div className="row">
             <button className="btn primary grow" type="submit">
               保存する

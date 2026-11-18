@@ -81,3 +81,10 @@ export const ChevronIcon = () => (
     <path d="M9 5.5l6.5 6.5L9 18.5" />
   </Icon>
 );
+
+export const ClockIcon = () => (
+  <Icon size={20}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </Icon>
+);

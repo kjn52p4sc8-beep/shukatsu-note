@@ -10,8 +10,6 @@ export interface CalEvent {
   date: string;
   start?: number;
   end?: number;
-  /** 予定の開始が実際の締切より何分早いか */
-  lead?: number;
 }
 
 export function utcStamp(ms: number) {
@@ -24,7 +22,10 @@ export function utcStamp(ms: number) {
 const whenText = (date: string, time: string) =>
   date ? date.replace(/-/g, '/') + (time ? ' ' + time : '（時刻未定）') : '';
 
-/** 時刻ありの締切は「締切の30分前〜締切」の予定にする。 */
+/**
+ * 時刻ありの締切は「締切の時刻に始まる予定」にする（最長30分。日付をまたがない）。
+ * 予定の開始＝締切なので、.ics の通知もカレンダー側の既定の通知も、締切の時刻から数えて鳴る。
+ */
 export function calEvent(it: Entry, type: 'deadline' | 'event'): CalEvent | null {
   const isD = type === 'deadline';
   const date = isD ? it.dDate : it.eDate;
@@ -48,25 +49,30 @@ export function calEvent(it: Entry, type: 'deadline' | 'event'): CalEvent | null
   if (ev.allDay) {
     ev.title = (isD ? '【締切】' : '【開催】') + name;
   } else if (isD) {
-    ev.end = toMs(date, time, true)!;
-    ev.start = ev.end - 30 * MIN;
-    ev.lead = 30;
+    ev.start = toMs(date, time, true)!;
+    ev.end = Math.min(ev.start + 30 * MIN, toMs(date, '', true)!);
+    if (ev.end <= ev.start) ev.end = ev.start + MIN;
     ev.title = '【締切 ' + time + '】' + name;
   } else {
     ev.start = toMs(date, time, false)!;
     ev.end = ev.start + HOUR;
-    ev.lead = 0;
     ev.title = '【開催】' + name;
   }
   return ev;
 }
 
-/** リマインダー（分）→ iCalendar の TRIGGER。終日の締切は 24:00 締切とみなし、前日は前日9:00。 */
+/**
+ * リマインダー（分）→ iCalendar の TRIGGER（予定の開始から数える）。
+ * - 時刻ありの予定：開始（＝締切・開催の時刻）の r 分前。
+ * - 時刻なしの締切：その日の 24:00 締切とみなす。日単位（前日・3日前・7日前）は、その日の朝9:00。
+ *   時間単位（3時間前・1時間前）は当日の 21:00・23:00（予定の開始＝その日の0:00より後なので、正の値になる）。
+ * - 時刻なしの開催：日単位だけを、その日の朝9:00に鳴らす。
+ */
 export function alarmTriggers(ev: CalEvent, reminders: number[]): string[] {
   const out: string[] = [];
   for (const r of reminders || []) {
-    if (!ev.allDay) out.push('-PT' + (r + (ev.lead || 0)) + 'M');
-    else if (r >= 1440) out.push('-PT15H');
+    if (!ev.allDay) out.push('-PT' + r + 'M');
+    else if (r >= 1440) out.push('-PT' + (Math.round(r / 1440) * 24 - 9) + 'H');
     else if (ev.type === 'deadline') out.push('PT' + (1440 - r) + 'M');
   }
   return Array.from(new Set(out));

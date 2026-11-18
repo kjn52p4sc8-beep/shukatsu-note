@@ -9,7 +9,7 @@ async function add(page: Page, company: string, shortcut: '明日' | '1週間後
 
 test('ホームはデザイン案の並びで、企業の行は押すと詳細が開く', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '就活ノート' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '就活しめきりボード' })).toBeVisible();
   await expect(page.getByText('今日の一歩を、未来につなげよう。')).toBeVisible();
   for (const title of ['直近の締切', '企業一覧', 'ESの文字数別保存', '面接ノート']) {
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
