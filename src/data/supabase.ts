@@ -1,3 +1,4 @@
+import './mail-callback';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_KEY, SUPABASE_URL, cloudEnabled } from './config';
 

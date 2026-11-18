@@ -16,6 +16,7 @@
     "test:local": "playwright test --config playwright.local.config.ts --trace off"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@playwright/test": "1.63.0",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",

@@ -1,4 +1,6 @@
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { MailDialog } from './MailDialog';
+import { finishMailCallback } from '../data/mail';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { characterCount, gmailUrl } from '../core/companies';
 import { deadlineMs, fmtDate, shortLeft, weekRange, DAY } from '../core/dates';
 import { checkProgress, newId, pendingEntries, platformCounts, sampleEntries, sortEntries } from '../core/entries';
@@ -14,6 +16,7 @@ import { useNow } from '../ui/useNow';
 import { CalendarDialog } from './CalendarDialog';
 import { CareerNotebook } from './CareerNotebook';
 import { EntryCard } from './EntryCard';
+import { DeleteEntryDialog } from './DeleteEntryDialog';
 import { EntryForm } from './EntryForm';
 import { ExportDialog } from './ExportDialog';
 import { NextBoard } from './NextBoard';
@@ -39,6 +42,7 @@ type Dialog =
   | { type: 'library' }
   /** ホームの「ESの文字数別保存」から開く、その文字数の原稿一覧 */
   | { type: 'eslist'; limit: number }
+  | { type: 'mail' }
   | { type: 'gmail' }
   | { type: 'calendar-pick' }
   | { type: 'notifications' }
@@ -51,7 +55,10 @@ const HOME_LIMITS = [400, 800, 1200];
 export function BoardScreen({ store, user, recovery }: Props) {
   const snap = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const now = useNow();
+  const [mailNotice,setMailNotice]=useState('');
+  useEffect(()=>{if(!user)return;let alive=true;const result=finishMailCallback();if(result)void result.then(message=>{if(alive)setMailNotice(message);});return()=>{alive=false;};},[user]);
   const [dialog, setDialog] = useState<Dialog>({ type: 'none' });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [recoveryDone, setRecoveryDone] = useState(false);
   const [textFile, setTextFile] = useState<{ name: string; text: string } | null>(null);
   const [alertClosed, setAlertClosed] = useState(false);
@@ -95,6 +102,22 @@ export function BoardScreen({ store, user, recovery }: Props) {
   const find = (id: string | null) => (id ? entries.find((e) => e.id === id) ?? null : null);
   const close = () => setDialog({ type: 'none' });
 
+  const deleteEntries = (ids: string[]) => {
+    const deleted = store.getSnapshot().entries.filter(e => ids.includes(e.id));
+    if (!deleted.length) { setDeleteId(null); return; }
+    store.deleteEntries(deleted.map(e => e.id));
+    setDeleteId(null);
+    close();
+    toast(`${deleted.length}件の登録を削除しました`, {
+      label: '元に戻す',
+      run: () => {
+        // Do not overwrite an entry that has already been restored/edited elsewhere.
+        const active = new Set(store.getSnapshot().entries.map(e => e.id));
+        store.saveEntries(deleted.filter(e => !active.has(e.id)));
+      },
+    });
+  };
+
   const onSaveFile = async (name: string, text: string, mime: string) => {
     if (!(await saveFile(name, text, mime))) setTextFile({ name, text });
   };
@@ -136,6 +159,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
   };
 
   const editing = dialog.type === 'form' ? find(dialog.id) : null;
+  const deleting = find(deleteId);
   const noteEntry = dialog.type === 'notebook' ? find(dialog.id) : null;
   const calEntry = dialog.type === 'calendar' ? find(dialog.id) : null;
   const hasSample = entries.some((e) => e.sample);
@@ -159,6 +183,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
       </header>
 
       <main className="wrap sheet" id="app">
+        {mailNotice && <p className="note" role="status">{mailNotice}</p>}
         {!alertClosed && near.length > 0 && (
           <div className="alert" role="alert">
             <ul>
@@ -268,6 +293,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
             <EntryCard
               key={it.id} entry={it} now={now}
               onEdit={(id) => setDialog({ type: 'form', id })}
+              onDelete={setDeleteId}
               onCalendar={(id) => setDialog({ type: 'calendar', id })}
               onStatus={(id, s) => {
                 if (s === 'submitted') markSubmitted(id);
@@ -340,6 +366,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
         </section>
 
         <section className="sec out-links" aria-label="ほかのアプリと連携">
+          <button type="button" onClick={()=>setDialog({type:'mail'})}><span className="ico white"><MailIcon /></span>応募メールから締切を取り込む<ChevronIcon /></button>
           <button type="button" onClick={() => (companies.length ? setDialog({ type: 'gmail' }) : toast('企業を登録すると、Gmailでその企業のメールを探せます'))}>
             <span className="ico white"><MailIcon /></span>
             Gmailで検索
@@ -376,13 +403,10 @@ export function BoardScreen({ store, user, recovery }: Props) {
             close();
             toast(editing ? '保存しました' : '追加しました');
           }}
-          onDelete={(id) => {
-            store.deleteEntries([id]);
-            close();
-            toast('削除しました');
-          }}
+          onDelete={setDeleteId}
         />
       )}
+      {deleting && <DeleteEntryDialog key={deleting.id} entry={deleting} entries={entries} onDelete={deleteEntries} onClose={() => setDeleteId(null)} />}
       {calEntry && (
         <CalendarDialog
           entry={calEntry}
@@ -449,7 +473,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
       })()}
       {dialog.type === 'gmail' && (
         <Modal title="Gmailで検索" onClose={close}>
-          <p className="muted">企業名で検索したGmailを別のタブで開きます。Gmailへのログインが必要です。このアプリがメールを読み取ることはありません。</p>
+          <p className="muted">企業名で検索したGmailを別のタブで開きます。Gmailへのログインが必要です。この検索操作ではメールを読み取りません。自動取り込みは「応募メールから締切を取り込む」で別途連携します。</p>
           <ul className="rows">
             {companies.map((name) => (
               <li key={name}>
@@ -492,6 +516,7 @@ export function BoardScreen({ store, user, recovery }: Props) {
           <button className="btn" onClick={() => setDialog({ type: 'notebook', id: e.id, tab: 'interview' })}>面接ノート {e.interviews.length}</button>
         </div></div>)}</div>
       </Modal>}
+      {dialog.type === 'mail' && <MailDialog cloud={!!user} entries={entries} onSync={()=>store.sync()} onClose={close} />}
       {dialog.type === 'settings' && (
         <SettingsDialog
           store={store} snap={snap} user={user}

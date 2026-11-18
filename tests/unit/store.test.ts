@@ -115,6 +115,24 @@ describe('同期', () => {
     expect(names(a)).toEqual([]);
   });
 
+  it('削除を同期した後でも保存内容ごと復元でき、別端末にも復元が伝わる', async () => {
+    const { device } = setup();
+    const a = device('a').store;
+    const b = device('b').store;
+    a.saveEntry(make('A社', { memo: '残したいメモ', esDrafts: [{ id: 'es1', title: '志望動機', limit: 400, text: '本文' }] }));
+    await a.sync();
+    const saved = structuredClone(a.getSnapshot().entries[0]);
+    a.deleteEntries([saved.id]);
+    await a.sync();
+    await b.sync();
+    expect(names(b)).toEqual([]);
+    a.saveEntries([saved]);
+    await a.sync();
+    await b.sync();
+    expect(b.getSnapshot().entries[0]).toMatchObject({ id: saved.id, memo: saved.memo, esDrafts: saved.esDrafts, deletedAt: null });
+    a.dispose(); b.dispose();
+  });
+
   it('同じエントリーを2台で編集したら、あとから編集したほうが残る', async () => {
     const { device } = setup();
     const a = device('a').store;

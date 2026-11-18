@@ -37,7 +37,6 @@ export function EntryForm({ entry, companies, onSave, onDelete, onClose }: Props
   const [url, setUrl] = useState(entry?.url ?? '');
   const [memo, setMemo] = useState(entry?.memo ?? '');
   const [error, setError] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const addCheck = (text: string) => {
     const t = text.trim().slice(0, 60);
@@ -237,28 +236,16 @@ export function EntryForm({ entry, companies, onSave, onDelete, onClose }: Props
         )}
 
         <div className="form-footer">
-        {confirmDelete && entry ? (
-          <div className="row">
-            <span className="err grow">この項目を削除します。元に戻せません。</span>
-            <button className="btn danger" type="button" onClick={() => onDelete(entry.id)}>
-              削除する
-            </button>
-            <button className="btn" type="button" onClick={() => setConfirmDelete(false)}>
-              やめる
-            </button>
-          </div>
-        ) : (
           <div className="row">
             <button className="btn primary grow" type="submit">
               保存する
             </button>
             {entry && (
-              <button className="btn danger" type="button" onClick={() => setConfirmDelete(true)}>
+              <button className="btn danger" type="button" onClick={() => onDelete(entry.id)}>
                 削除
               </button>
             )}
           </div>
-        )}
         </div>
       </form>
     </Modal>

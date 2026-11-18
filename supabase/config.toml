@@ -428,3 +428,6 @@ enabled = true
 # push 関数はデータベースの定期実行からも呼ばれるため、関数の中で呼び出し元を確かめる
 [functions.push]
 verify_jwt = false
+
+[functions.mail-bridge]
+verify_jwt = false

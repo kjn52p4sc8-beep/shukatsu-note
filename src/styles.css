@@ -459,3 +459,9 @@ details.checks summary{min-height:44px;align-content:center}
   .board .who{font-size:17px}
   .board .count{min-width:70px}
 }
+
+.mail-review{padding:16px;border:1px solid var(--line);border-radius:14px}
+.mail-evidence{margin:0;padding:12px;border-left:3px solid var(--accent);background:var(--surface-2);white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+.mail-demo{padding:12px;border-bottom:1px solid var(--line)}
+.check-row{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.check-row input{flex:none}

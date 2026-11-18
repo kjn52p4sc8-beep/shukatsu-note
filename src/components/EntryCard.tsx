@@ -10,6 +10,7 @@ interface Props {
   entry: Entry;
   now: number;
   onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
   onCalendar: (id: string) => void;
   onStatus: (id: string, status: Entry['status']) => void;
   onNote: (id: string, tab: 'es' | 'interview') => void;
@@ -33,7 +34,7 @@ function linkify(text: string): ReactNode[] {
  * 企業一覧の1行。ふだんは企業名と締切だけの行で、押すと詳細（提出物・メモ・操作）が開く。
  * すぐ対応が必要なもの（未提出で、期限切れか締切が7日以内）は最初から開いておく。
  */
-export function EntryCard({ entry: it, now, onEdit, onCalendar, onStatus, onCheck, onNote }: Props) {
+export function EntryCard({ entry: it, now, onEdit, onDelete, onCalendar, onStatus, onCheck, onNote }: Props) {
   const ms = deadlineMs(it);
   const [open, setOpen] = useState(() => it.status === 'undecided' && ms !== null && ms - Date.now() <= 7 * DAY);
   const [checksOpen, setChecksOpen] = useState(it.status === 'undecided');
@@ -152,6 +153,9 @@ export function EntryCard({ entry: it, now, onEdit, onCalendar, onStatus, onChec
             )}
             <button className="btn small" type="button" onClick={() => onEdit(it.id)}>
               編集
+            </button>
+            <button className="btn small danger" type="button" onClick={() => onDelete(it.id)}>
+              削除
             </button>
           </div>
         </div>
