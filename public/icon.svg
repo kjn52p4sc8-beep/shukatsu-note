@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 就活ノートのアイコン：締切までの残り時間を表すリングと、「今日の一歩」の双葉。
+       中身は中心から半径 190 の内側に収めてあるので、maskable（丸や角丸に切り抜き）でも欠けない。 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#284638"/><stop offset=".55" stop-color="#3d6a54"/><stop offset="1" stop-color="#83a98d"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd8c6"/><stop offset="1" stop-color="#ef8b68"/>
+    </linearGradient>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0d1a13" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="152" fill="none" stroke="#ffffff" stroke-opacity=".15" stroke-width="36"/>
+  <path d="M256 104a152 152 0 1 1-144.6 105" fill="none" stroke="url(#ring)" stroke-width="36" stroke-linecap="round" filter="url(#sh)"/>
+  <circle cx="111.4" cy="209" r="24" fill="#fffdf8"/>
+  <g transform="translate(256 262) scale(1.22) translate(-256 -262)">
+    <path d="M256 344V276" stroke="#fffdf8" stroke-width="17" stroke-linecap="round"/>
+    <path d="M256 292c-5-34-32-52-70-50 2 36 29 56 70 50z" fill="#cfe2d3"/>
+    <path d="M256 278c5-42 38-66 84-64-2 46-37 70-84 64z" fill="#fffdf8"/>
+  </g>
+</svg>

@@ -1,0 +1,44 @@
+{
+  "name": "shukatsu-shimekiri-board",
+  "version": "1.0.0",
+  "description": "就活しめきりボード: エントリーと締切をまとめて管理するPWA",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test --trace off",
+    "vapid": "node scripts/generate-vapid.mjs",
+    "supabase:start": "supabase start -x realtime,storage-api,imgproxy,studio,logflare,vector,supavisor,postgres-meta",
+    "supabase:functions": "supabase functions serve --env-file supabase/functions/.env",
+    "test:local": "playwright test --config playwright.local.config.ts --trace off"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "http_ece": "^1.2.1",
+    "jszip": "^3.10.2",
+    "supabase": "^3.1.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "docx": "^9.15.4",
+    "exceljs": "^4.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "workbox-core": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1"
+  },
+  "private": true,
+  "type": "module"
+}
